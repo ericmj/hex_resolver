@@ -1,18 +1,26 @@
 defmodule HexResolver do
-  @moduledoc """
-  Documentation for `HexResolver`.
-  """
+  def solve(requests, registry) do
+    solve(requests, registry, [])
+  end
 
-  @doc """
-  Hello world.
+  defp solve([{request, requirement} | requests], registry, acc) do
+    version =
+      Enum.find_value(registry, fn
+        {^request, version} ->
+          Version.match?(version, requirement) && version
 
-  ## Examples
+        {_package, _version} ->
+          nil
+      end)
 
-      iex> HexResolver.hello()
-      :world
+    if version do
+      solve(requests, registry, [{request, version} | acc])
+    else
+      {:error, {:unsatisfied, request, requirement}}
+    end
+  end
 
-  """
-  def hello do
-    :world
+  defp solve([], _registry, acc) do
+    {:ok, acc}
   end
 end
