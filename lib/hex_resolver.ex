@@ -1,22 +1,27 @@
 defmodule HexResolver do
   def solve(requests, registry) do
-    solve(requests, registry, [])
+    solve(requests, registry, %{})
   end
 
   defp solve([{request, requirement} | requests], registry, acc) do
-    version =
-      Enum.find_value(registry, fn
-        {^request, version} ->
-          Version.match?(version, requirement) && version
+    case Map.fetch(registry, request) do
+      {:ok, versions} ->
+        result =
+          Enum.find(versions, fn {version, _deps} ->
+            Version.match?(version, requirement)
+          end)
 
-        {_package, _version} ->
-          nil
-      end)
+        case result do
+          {version, deps} ->
+            acc = Map.put(acc, request, version)
+            solve(requests ++ deps, registry, acc)
 
-    if version do
-      solve(requests, registry, [{request, version} | acc])
-    else
-      {:error, {:unsatisfied, request, requirement}}
+          nil ->
+            {:error, {:unsatisfied, request, requirement}}
+        end
+
+      :error ->
+        {:error, {:unsatisfied, request, requirement}}
     end
   end
 
